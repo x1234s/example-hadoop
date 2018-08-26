@@ -1,20 +1,18 @@
-package edu.hfut.hadoop;
+package edu.hfut.flowsum.partitioner;
 
+import edu.hfut.flowsum.FlowBean;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.io.IntWritable;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.mapreduce.Job;
 import org.apache.hadoop.mapreduce.lib.input.FileInputFormat;
 import org.apache.hadoop.mapreduce.lib.output.FileOutputFormat;
 
-import java.io.IOException;
-
 /**
- * 统计单词个数
+ * 设置自定义分区方式
  */
-public class WordCountDriver {
-    public static void main(String[] args) throws IOException, ClassNotFoundException, InterruptedException {
+public class FlowSumSortDriver {
+    public static void main(String[] args) throws Exception {
         // 通过job分装本地mr信息
         Configuration conf = new Configuration();
         // 设置本地运行模式，可不放入hadoop集群中运行
@@ -22,25 +20,32 @@ public class WordCountDriver {
 
         Job job = Job.getInstance(conf);
         // 指定本次mr job jar运行主类
-        job.setJarByClass(WordCountDriver.class);
+        job.setJarByClass(FlowSumSortDriver.class);
+
+        // 这是分区方式
+        job.setPartitionerClass(ProvincePartitioner.class);
+        // 如果分区个数==task个数   正常执行
+        // 如果分区个数 < task个数   正常执行，只不过会有空的结果文件产生
+        // 如果分区个数 > task个数   错误 Illigal partition
+        job.setNumReduceTasks(6);
 
         // 设置本次mr  所用的mapper  reducer类分别是什么
-        job.setMapperClass(WordCountMapper.class);
-        job.setReducerClass(WordCountReducer.class);
+        job.setMapperClass(FlowSumSortMapper.class);
+        job.setReducerClass(FlowSumSortReducer.class);
 
         // 设置本次mr mapper阶段的输出 k  v 类型
-        job.setMapOutputKeyClass(Text.class);
-        job.setMapOutputValueClass(IntWritable.class);
+        job.setMapOutputKeyClass(FlowBean.class);
+        job.setMapOutputValueClass(Text.class);
 
         // 设置本次mr 最后输出的k  v类型
         job.setOutputKeyClass(Text.class);
-        job.setOutputValueClass(IntWritable.class);
+        job.setOutputValueClass(FlowBean.class);
 
         // 本地模式需要配置
 //         FileInputFormat.setInputPaths(job, "D:\\wordcount\\input");
 //         FileOutputFormat.setOutputPath(job, new Path("D:\\wordcount\\output"));
-        FileInputFormat.setInputPaths(job, "/wordcount/input");
-        FileOutputFormat.setOutputPath(job, new Path("/wordcount/output"));
+        FileInputFormat.setInputPaths(job, "/flowsum/input");
+        FileOutputFormat.setOutputPath(job, new Path("/flowsum/output"));
 
         boolean b = job.waitForCompletion(true);
         System.exit(b ? 0 : 1);
